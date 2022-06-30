@@ -43,7 +43,7 @@ ignore_patterns = [".venv/**/*.py", "**/*.pxd", "**/*.pyx"]
 python_version = "3.9"
 warn_return_any = true
 warn_unused_configs = true
-ignore_missing_imports = false
+ignore_missing_imports = true
 plugins = ["pydantic.mypy"]
 exclude = ['^venv/', '^__init__\.py$']
 
@@ -70,6 +70,7 @@ uvicorn = "^0.17.6"
 typer = "^0.4.1"
 hypercorn = "^0.13.2"
 pydantic = "^1.9.0"
+docker = "^5.0.3"
 
 [tool.poetry.dev-dependencies]
 mypy = "^0.931"

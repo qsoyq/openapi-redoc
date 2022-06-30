@@ -1,5 +1,7 @@
 import logging
 
+from itertools import chain
+
 import httpx
 import typer
 import uvicorn
@@ -10,6 +12,7 @@ from fastapi.openapi.utils import get_openapi
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from settings import ContactSettings, InfoSettings, RefSettigns, ServerSettings
+from watcher import DockerWatcher
 
 cmd = typer.Typer()
 app = FastAPI(openapi_url=None)
@@ -25,7 +28,8 @@ async def redoc_html(req: Request) -> HTMLResponse:
 async def openapi():
     paths = {}
     components = {}
-    urls = [f'{ref}' for ref in RefSettigns().refs]
+    urls = [f'{ref}' for ref in RefSettigns().refs]  # type: ignore
+    urls.extend(openapi_url_from_docker())
     cli = httpx.AsyncClient(timeout=1.0)
     for url in urls:
         try:
@@ -67,8 +71,20 @@ def http(
                                 envvar='http_reload'),
 ):
     """启动 http 服务"""
+    logging.basicConfig(level=logging.DEBUG)
     logging.info(f"http server listening on {host}:{port}")
-    uvicorn.run(app, host=host, port=port, debug=debug, reload=reload)
+    uvicorn.run(app, host=host, port=port, debug=debug, reload=reload)  # type: ignore
+
+
+def openapi_url_from_docker() -> list[str]:
+    try:
+        c = DockerWatcher()
+        containers = c.containers_by_label("openapi.redoc.enable", 'true')
+        hosts = chain(*[c.get_ipaddress(x) for x in containers])
+        return [f"http://{x}/openapi.json" for x in hosts]
+    except Exception:
+        logging.warning("openapi_url_from_docker error", exc_info=True)
+    return []
 
 
 if __name__ == '__main__':

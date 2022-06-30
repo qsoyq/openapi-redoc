@@ -21,7 +21,7 @@ class ContactSettings(BaseSettings):
 class RefSettigns(BaseSettings):
 
     # 需要线上可访问的 openapi 文档地址
-    refs: List[HttpUrl]
+    refs: List[HttpUrl] = []
 
 
 class ServerSettings(BaseSettings):
