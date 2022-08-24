@@ -1,0 +1,37 @@
+version: '3'
+
+networks:
+  default:
+    name: my_bridge
+    external: true
+
+services:
+
+    openapi-redoc:
+        build:
+          dockerfile: ./Dockerfile
+        restart: always
+        volumes:
+          - /var/run/docker.sock:/var/run/docker.sock
+
+        ports:
+          - 8000:8000
+
+        environment:
+          title: OpenAPI
+          version: 0.0.1
+
+          # openapi_url_pywhoami: http://openapi-redoc-pywhoami:8000/openapi.json
+
+          label_name: openapi-redoc-project-name
+          label_value: openapi-redoc
+
+          server_url_localhost: http://localhost:8000
+          server_url_localip: http://127.0.0.1:8000
+
+
+    openapi-redoc-pywhoami:
+        image: clpy9793/pywhoami
+        restart: unless-stopped
+        labels:
+          openapi-redoc-project-name: openapi-redo

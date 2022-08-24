@@ -1,28 +1,32 @@
 # openapi-redoc
 
-聚合多个服务对应的OpenAPI描述文件.
-
-通过 http 请求拉取多个 `openapi.json`文件, 合并`paths`项和`components`项.
+拉取多个服务的 `openapi.json`文件, 合并`paths`项和`components`项.
 
 其余部分可通过环境变量配置.
 
-## 使用注意
+## 通过环境变量配置
 
-服务运行前需要传递指定的环境变量.
-
-通过环境变量`refs`指定多个线上的 OpenAPI 描述文件访问链接.
-
-通过环境变量`urls`指定多个服务器信息.
-
-示例环境变量如下:
+接口在被请求时, 会读取环境变量中所有匹配`openapi_url_*`的值作为需要收集的目标.
 
 ```sh
-servers='[{"url": "https://host-01.com", "description":"生产环境"}, {"url": "https://host-02.com", "description":"测试环境"}]'
-
-refs='["https://host-01.com/openapi.json", "https://host-02.com/openapi.json"]'
+docker network create my_bridge
+docker run -d --network my_bridge  -e openapi_url_pywhoami=http://openapi_pywhoami:8000/openapi.json  -p 8888:8000  clpy9793/openapi-redoc
+docker run  -d --network my_bridge --name openapi_pywhoami  clpy9793/pywhoami
 ```
 
-## 运行
+## 通过 docker label 配置
+
+在启动服务时, 设置环境变量`label_name`和`label_value`.
+
+需要暴露 API 文档的容器需要配置相应的 docker label 键值.
+
+```sh
+docker network create my_bridge
+docker run -d --network my_bridge -v /var/run/docker.sock:/var/run/docker.sock  -e label_name=openapi-redoc -e label_value=test -p 8888:8000  clpy9793/openapi-redoc
+docker run  -d --network my_bridge  --label openapi-redoc=test clpy9793/pywhoami
+```
+
+## 本地运行
 
 ```sh
 pip install poetry
@@ -32,10 +36,4 @@ poetry install
 poetry shell
 pre-commit install
 python src/main.py
-```
-
-## 容器快捷部署
-
-```sh
-docker run -d -p 8888:8000 -e refs='["https://{host-01}/openapi.json", "https://{host-02}/openapi.json"]' clpy9793/openapi-redoc
 ```

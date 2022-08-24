@@ -1,6 +1,8 @@
 import logging
+import os
 
 from itertools import chain
+from typing import Generator, Tuple
 
 import httpx
 import typer
@@ -10,8 +12,10 @@ from fastapi import FastAPI, Request
 from fastapi.openapi.docs import get_redoc_html
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import HTMLResponse, JSONResponse
+from pydantic import AnyHttpUrl, BaseModel, ValidationError
 
-from settings import ContactSettings, InfoSettings, RefSettigns, ServerSettings
+from schema import ServerSchema
+from settings import AppSettings, ContactSettings, InfoSettings
 from watcher import DockerWatcher
 
 cmd = typer.Typer()
@@ -28,9 +32,10 @@ async def redoc_html(req: Request) -> HTMLResponse:
 async def openapi():
     paths = {}
     components = {}
-    urls = [f'{ref}' for ref in RefSettigns().refs]  # type: ignore
-    urls.extend(openapi_url_from_docker())
-    cli = httpx.AsyncClient(timeout=1.0)
+    urls = []
+    urls.extend(openapi_url_from_env())
+    urls.extend(openapi_url_from_docker(AppSettings().label_name, AppSettings().label_value))
+    cli = httpx.AsyncClient(timeout=0.1)
     for url in urls:
         try:
             data = (await cli.get(url)).json()
@@ -48,7 +53,7 @@ async def openapi():
     info = InfoSettings()
     content = get_openapi(title=info.title, version=info.version, routes=app.routes, contact=contact)
     content['paths'] = paths
-    content['servers'] = [x.dict() for x in ServerSettings().servers]
+    content['servers'] = [x.dict() for x in servers_from_env()]
     content['components'] = components
     return JSONResponse(content)
 
@@ -76,15 +81,54 @@ def http(
     uvicorn.run(app, host=host, port=port, debug=debug, reload=reload)  # type: ignore
 
 
-def openapi_url_from_docker() -> list[str]:
+class HttpUrlModel(BaseModel):
+    url: AnyHttpUrl
+
+
+def is_http_url(url: str) -> bool:
+    try:
+        HttpUrlModel(url=url)  # type: ignore
+    except ValidationError:
+        return False
+    return True
+
+
+def openapi_url_from_docker(label: str, value: str) -> list[str]:
+    if not label or not value:
+        return []
+
     try:
         c = DockerWatcher()
-        containers = c.containers_by_label("openapi.redoc.enable", 'true')
+        containers = c.containers_by_label(label, value)
         hosts = chain(*[c.get_ipaddress(x) for x in containers])
         return [f"http://{x}/openapi.json" for x in hosts]
     except Exception:
         logging.warning("openapi_url_from_docker error", exc_info=True)
     return []
+
+
+def openapi_url_from_env() -> list[str]:
+    urls = []
+    for _, v in env_by_prefix('openapi_url_'):
+        if is_http_url(v.lower()):
+            urls.append(v.lower())
+        else:
+            logging.debug(f"bad http url: {v}")
+    return urls
+
+
+def servers_from_env() -> list[ServerSchema]:
+    ret = []
+    for _, v in env_by_prefix("server_url"):
+        if is_http_url(v.lower()):
+            ret.append(ServerSchema(url=v.lower()))  # type: ignore
+    return ret
+
+
+def env_by_prefix(prefix: str) -> Generator[Tuple[str, str], None, None]:
+    for k, v in os.environ.items():
+        if k.lower().startswith(prefix):
+            yield (k, v)
 
 
 if __name__ == '__main__':

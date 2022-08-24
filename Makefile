@@ -3,7 +3,9 @@
 
 IMAGE_NAME := clpy9793/openapi-redoc
 
-default: refactor pre-commit image push
+default: format build push
+
+format: refactor pre-commit
 
 refactor:
 	@yapf -r -i . 
@@ -16,7 +18,8 @@ pre-commit:
 mypy:
 	@mypy .
 
-image:
+
+build:
 	docker build --platform linux/amd64 -t $(IMAGE_NAME) .
 
 push:

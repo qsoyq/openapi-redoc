@@ -1,7 +1,7 @@
-from pydantic import BaseModel, HttpUrl
+from pydantic import AnyHttpUrl, BaseModel
 
 
 class ServerSchema(BaseModel):
 
-    url: HttpUrl
+    url: AnyHttpUrl
     description: str = ''

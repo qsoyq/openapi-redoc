@@ -14,7 +14,8 @@ RUN pip install poetry -i https://mirrors.aliyun.com/pypi/simple
 
 RUN poetry config virtualenvs.create false
 
-RUN poetry install --no-dev
+# RUN poetry install --no-dev
+RUN poetry install
 
 COPY src /app/
 

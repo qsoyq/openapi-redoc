@@ -1,8 +1,6 @@
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import BaseSettings, HttpUrl
-
-from schema import ServerSchema
 
 
 class InfoSettings(BaseSettings):
@@ -18,11 +16,7 @@ class ContactSettings(BaseSettings):
     contact_email: str = ''
 
 
-class RefSettigns(BaseSettings):
+class AppSettings(BaseSettings):
 
-    # 需要线上可访问的 openapi 文档地址
-    refs: List[HttpUrl] = []
-
-
-class ServerSettings(BaseSettings):
-    servers: List[ServerSchema] = []
+    label_name: str = ''
+    label_value: str = ''
